@@ -6,19 +6,28 @@ plugins {
 	id "io.spring.javaformat"
 	id "java"
 	id "maven-publish"
+	id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
 }
 
-group = 'io.spring.asciidoctor.backends'
+ext {
+	set('signing.keyId',System.getenv('SIGNING_KEYID'))
+	set('signing.password',System.getenv('SIGNING_PASSWORD'))
+	set('signing.secretKeyRingFile',System.getenv('SIGNING_SECRETKEYRINGFILE'))
+}
+
+group = 'com.jcohy.asciidoctor.backends'
 description = 'Spring Asciidoctor Backends'
 
 apply from: "$rootDir/gradle/publish-maven.gradle"
+apply from: "$rootDir/gradle/nexusPublications.gradle"
+apply plugin: 'signing'
 
 def generatedGem = "$buildDir/generated-resources/gem"
 def generatedAssets = "$buildDir/generated-resources/assets"
 def mavenProjectRepository = "$buildDir/maven-repository"
 
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
+sourceCompatibility = "17"
+targetCompatibility = "17"
 
 java {
 	withJavadocJar()
@@ -153,14 +162,39 @@ format.dependsOn prettierFormat
 
 publishing {
 	publications {
-		maven(MavenPublication) {
+		mavenJava(MavenPublication) {
 			from components.java
 		}
 	}
 	repositories {
 		maven {
-			name "project"
-			url file(mavenProjectRepository).toURI()
+			credentials {
+				username System.getenv("ALIYUN_USERNAME")
+				password System.getenv("ALIYUN_PASSWORD")
+			}
+			name "jcohy"
+			url version.endsWith('SNAPSHOT') ? "https://packages.aliyun.com/maven/repository/2114765-snapshot-6mT705/" : "https://packages.aliyun.com/maven/repository/2114765-release-sAPkIv/"
 		}
 	}
+	repositories {
+		maven {
+			credentials {
+				username "xw-developer"
+				password "xxx"
+			}
+			name "xw"
+			allowInsecureProtocol true
+			url version.endsWith('SNAPSHOT') ? "http://3b7t671894.zicp.vip:53740/repository/snapshot" : "http://3b7t671894.zicp.vip:53740/repository/releases"
+		}
+	}
+//	repositories {
+//		maven {
+//			name "project"
+//			url file(mavenProjectRepository).toURI()
+//		}
+//	}
+}
+
+signing {
+	sign publishing.publications.mavenJava
 }
